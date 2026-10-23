@@ -253,6 +253,62 @@ class PanelDriver {
   }
   // Interrupted-refresh cutoff tuning (ED2208: where the gate scan freezes).
   virtual void setFastRefreshCutoffMs(uint16_t ms) { (void)ms; }
+  // xteink-pokemon: game-mode tuning of Fast refreshes - the forced temperature
+  // (TSSET) and frame rate (PLL) to use instead of the driver's own (0 = own).
+  // Applies to Fast refreshes only; drivers without the registers ignore it.
+  virtual void setFastRefreshTuning(uint8_t tsset, uint8_t pll) {
+    (void)tsset;
+    (void)pll;
+  }
+  // xteink-pokemon: game-mode Fast refreshes with a host-loaded DU waveform whose
+  // frame counts are scaled to `percent` (0 = the panel's built-in waveform).
+  virtual void setFastRefreshDuScale(uint8_t percent) { (void)percent; }
+  // xteink-pokemon: game-mode Fast refreshes send and drive only the rectangle
+  // that changed since the last refresh, and skip a frame that did not change.
+  // Drivers without a partial window ignore it.
+  virtual void setFastRefreshDiffWindow(bool on) { (void)on; }
+  // xteink-pokemon: where the last completed refresh spent its time, in
+  // microseconds, with running counts of completed and skipped (unchanged)
+  // refreshes (false where the driver does not measure it). With an overlapped
+  // refresh, waveformUs runs until the host came back for the result.
+  struct RefreshTimings {
+    uint32_t copyUs;      // snapshot of the frame for a later grayscale pass
+    uint32_t newPlaneUs;  // streaming the new frame (DTM2)
+    uint32_t setupUs;     // LUT load, registers, power on, until the waveform starts
+    uint32_t waveformUs;  // the waveform itself (DRF until BUSY releases)
+    uint32_t oldPlaneUs;  // streaming the frame back as the next diff's OLD plane
+    uint32_t planeBytes;  // bytes sent per plane
+    uint32_t refreshes;   // refreshes completed so far
+    uint32_t skipped;     // frames skipped so far because nothing had changed
+  };
+  virtual bool lastRefreshTimings(RefreshTimings& out) const {
+    (void)out;
+    return false;
+  }
+  // xteink-pokemon: pulse drive, a game's per-pixel refresh. One scan drives
+  // the pixels set in `drive` for `frames` waveform frames toward their value
+  // in `target` (1 white, 0 black) and holds every other pixel, over rows
+  // row0..row1 and bytes byte0..byte1 of the framebuffer layout; false where
+  // the driver cannot pulse. With `wait` it returns once the scan is done;
+  // without, as soon as the waveform runs (both buffers may change then), and
+  // pulseFinish() - or the next scan or refresh - waits it out.
+  // endPulseDrive() hands the panel back to ordinary refreshes, the next of
+  // which cleans the whole screen.
+  virtual bool pulseScan(EpdBus& bus, const uint8_t* target, const uint8_t* drive, uint16_t row0, uint16_t row1,
+                         uint16_t byte0, uint16_t byte1, uint8_t frames, bool wait) {
+    (void)bus;
+    (void)target;
+    (void)drive;
+    (void)row0;
+    (void)row1;
+    (void)byte0;
+    (void)byte1;
+    (void)frames;
+    (void)wait;
+    return false;
+  }
+  virtual void pulseFinish(EpdBus& bus) { (void)bus; }
+  virtual void endPulseDrive(EpdBus& bus) { (void)bus; }
   virtual uint16_t fastRefreshCutoffMs() const { return 0; }
   // Hold the periodic anti-ghost full refresh through a continuous interaction
   // (e.g. a live slider drag): while set, fast refreshes are never promoted to a

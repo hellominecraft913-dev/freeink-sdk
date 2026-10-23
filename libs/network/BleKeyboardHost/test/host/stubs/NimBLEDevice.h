@@ -103,13 +103,8 @@ class NimBLERemoteCharacteristic {
 
 class NimBLERemoteService {
  public:
-  const NimBLEUUID& getUUID() const { return uuid_; }
   NimBLERemoteCharacteristic* getCharacteristic(const NimBLEUUID& uuid) const;
   const std::vector<NimBLERemoteCharacteristic*>& getCharacteristics(bool refresh = false) const;
-
- private:
-  NimBLEUUID uuid_;
-  friend struct fakeble::FakeState;
 };
 
 struct NimBLEConnInfo {};
@@ -125,7 +120,6 @@ class NimBLEClient {
   bool cancelConnect();
   int getLastError() const;
   NimBLERemoteService* getService(const NimBLEUUID& uuid);
-  const std::vector<NimBLERemoteService*>& getServices(bool refresh = false);
   void setConnectTimeout(uint32_t timeoutMs);
   void setConnectionParams(uint16_t minInterval, uint16_t maxInterval, uint16_t latency, uint16_t timeout);
   void setClientCallbacks(NimBLEClientCallbacks* callbacks, bool deleteOnDisconnect = true);

@@ -38,8 +38,7 @@ class OpdsClient {
   explicit OpdsClient(OpdsTransport& transport) : http(transport) {}
 
   // --- configuration -------------------------------------------------------
-  void setServer(std::string url, std::string username, std::string password,
-                 std::vector<HttpHeader> headers = {});
+  void setServer(std::string url, std::string username, std::string password);
   // Restore a persisted token set (from the SD token store).
   void setTokens(std::string access, std::string refresh, std::string refreshUrl);
   // Accept-Language for content negotiation (localized catalogs); empty sends
@@ -90,7 +89,6 @@ class OpdsClient {
   std::string serverUrl;
   std::string username;
   std::string password;
-  std::vector<HttpHeader> customHeaders;
   std::string acceptLang;
   std::string bearerToken;
   std::string refreshTokenValue;

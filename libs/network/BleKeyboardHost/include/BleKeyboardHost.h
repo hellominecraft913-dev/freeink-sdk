@@ -23,8 +23,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <atomic>
-
 namespace freeink {
 
 // Non-character keys an editor/UI cares about. Printable keys arrive as `ch`.
@@ -132,9 +130,7 @@ class BleKeyboardHost {
   // 2 s) for the connection task to leave a connect, pairing or discovery wait
   // and for the link to finish closing. When that takes longer, nothing is
   // deleted under NimBLE: end() returns false, isStopping() stays true and a
-  // later end() carries on from there. end(0) never waits. Safe to call from
-  // more than one task: while one end() runs, another returns false at once
-  // (still stopping) instead of tearing down alongside it.
+  // later end() carries on from there. end(0) never waits.
   bool end(uint32_t timeoutMs = 1000);
 
   // True from an end() that returned false until one returns true. begin() is
@@ -242,9 +238,7 @@ class BleKeyboardHost {
   volatile bool connectFailed_ = false;
   volatile bool pairingPasskeyReady_ = false;
   volatile bool scanning_ = false;
-  // Atomic: read from other tasks (isRunning) while end() clears it after
-  // raising the stopping flag.
-  std::atomic<bool> begun_{false};
+  bool begun_ = false;
 
   // Key auto-repeat: HID delivers one report per state change, so holding a key
   // (backspace, arrows) only sends a single press. The backend records the held

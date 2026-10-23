@@ -166,6 +166,71 @@ class Uc8279X4Driver : public PanelDriver {
   bool _pendingRefresh = false;
   bool _pendingTurnOff = false;
   bool _pendingPartial = false;
+  // xteink-pokemon: game-mode Fast tuning (0 = the config's value), and the PLL
+  // value last written, so the stock one comes back for other refreshes.
+  uint8_t _tuneTsset = 0;
+  uint8_t _tunePll = 0;
+  uint8_t _pllWritten = 0;
+  // xteink-pokemon: Fast refreshes run the stock X3 UC8279 DU bank with every
+  // phase's frame count scaled to this percentage (0 = the OTP waveform).
+  uint8_t _duScalePct = 0;
+  // xteink-pokemon: the last refresh's phases (lastRefreshTimings) and the
+  // clock the next phase is measured from.
+  RefreshTimings _timings{};
+  RefreshTimings _lastTimings{};  // the last completed refresh, with the counts
+  uint32_t _phaseStartUs = 0;
+  uint32_t phaseUs() {
+    const uint32_t now = micros();
+    const uint32_t d = now - _phaseStartUs;
+    _phaseStartUs = now;
+    return d;
+  }
+  void loadScaledDuLut(EpdBus& bus, uint8_t percent);
+  // xteink-pokemon: pulse drive (pulseScan). While `_pulseFrames` is set, a
+  // Fast refresh loads the one-pulse LUT of that many frames instead of the
+  // DU bank; `_pulseDirty` says the RAM planes hold drive masks, not a frame.
+  uint8_t _pulseFrames = 0;
+  bool _pulseDirty = false;
+  bool _pulsePending = false;  // a scan started without waiting
+  void loadPulseLut(EpdBus& bus, uint8_t frames);
+  // The window's two planes, built ahead (PSRAM, kept until endPulseDrive).
+  uint8_t* _pulseNew = nullptr;
+  uint8_t* _pulseOld = nullptr;
+  bool preparePulsePlanes(const uint8_t* target, const uint8_t* drive, uint16_t row0, uint16_t row1, uint16_t byte0,
+                          uint16_t byte1);
+  void sendPulsePlanes(EpdBus& bus, uint16_t row0, uint16_t row1, uint16_t byte0, uint16_t byte1, uint32_t size);
+  // xteink-pokemon: game-mode changed-rectangle refreshes. `_grayBase` doubles
+  // as the copy of what both RAM planes hold; `_diffRefValid` says it does.
+  // The window is in visible rows and bytes; `_windowActive` makes
+  // startBwRefresh send it instead of the full screen.
+  bool _diffWindow = false;
+  bool _diffRefValid = false;
+  bool _windowActive = false;
+  uint16_t _winRow0 = 0, _winRow1 = 0, _winByte0 = 0, _winByte1 = 0;
+  bool findChangedWindow(const uint8_t* fb);
+  void sendPartialWindow(EpdBus& bus);
+  void streamWindow(EpdBus& bus, uint8_t ramCmd, const uint8_t* fb);
+
+ public:
+  void setFastRefreshTuning(uint8_t tsset, uint8_t pll) override {
+    _tuneTsset = tsset;
+    _tunePll = pll;
+  }
+  void setFastRefreshDuScale(uint8_t percent) override { _duScalePct = percent; }
+  void setFastRefreshDiffWindow(bool on) override {
+    _diffWindow = on;
+    _diffRefValid = false;
+  }
+  bool lastRefreshTimings(RefreshTimings& out) const override {
+    out = _lastTimings;
+    return true;
+  }
+  bool pulseScan(EpdBus& bus, const uint8_t* target, const uint8_t* drive, uint16_t row0, uint16_t row1,
+                 uint16_t byte0, uint16_t byte1, uint8_t frames, bool wait) override;
+  void pulseFinish(EpdBus& bus) override;
+  void endPulseDrive(EpdBus& bus) override;
+
+ private:
 };
 
 PanelDriver& uc8279X4Driver();

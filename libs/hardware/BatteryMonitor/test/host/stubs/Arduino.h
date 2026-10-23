@@ -1,19 +1,13 @@
 #pragma once
 #include <cstdint>
-constexpr int HIGH = 1, LOW = 0, INPUT = 1, OUTPUT = 3, INPUT_PULLUP = 5, INPUT_PULLDOWN = 9;
+constexpr int HIGH = 1, LOW = 0, INPUT = 1, OUTPUT = 3, INPUT_PULLUP = 5;
 inline unsigned long hostMillis = 0;  // the test's clock; delay() advances it
 inline unsigned long millis() { return hostMillis; }
 inline void delay(unsigned long ms) { hostMillis += ms; }
 inline void delayMicroseconds(unsigned int) {}
-inline unsigned hostPinModeCalls = 0;
-inline void pinMode(int, int) { ++hostPinModeCalls; }
+inline void pinMode(int, int) {}
 inline void digitalWrite(int, int) {}
-inline int hostDigitalPin = 0;  // the test's detect-pin level
-inline unsigned hostDigitalReadCalls = 0;
-inline int digitalRead(int) {
-  ++hostDigitalReadCalls;
-  return hostDigitalPin;
-}
+inline int digitalRead(int) { return 0; }
 inline uint32_t hostAdcMv = 0;  // the test's battery pin reading
 inline uint32_t analogReadMilliVolts(int) { return hostAdcMv; }
 struct SerialStub {

@@ -65,6 +65,27 @@ class FreeInkDisplay {
 
   // M5 PaperColor: interrupted-refresh cutoff (ms). The cut freezes the gate
   void setFastRefreshCutoffMs(uint16_t ms);
+  // xteink-pokemon: see PanelDriver::setFastRefreshTuning (0, 0 = stock).
+  void setFastRefreshTuning(uint8_t tsset, uint8_t pll);
+  // xteink-pokemon: see PanelDriver::setFastRefreshDuScale (0 = built-in DU).
+  void setFastRefreshDuScale(uint8_t percent);
+  // xteink-pokemon: see PanelDriver::setFastRefreshDiffWindow.
+  void setFastRefreshDiffWindow(bool on);
+  // xteink-pokemon: the display SPI clock for a game (0 = the driver's default).
+  // Call it with no refresh running.
+  void setDisplaySpiHz(uint32_t hz);
+  // xteink-pokemon: the last completed refresh's phases in microseconds: copy,
+  // new plane, setup, waveform, old plane; then the bytes sent per plane and
+  // the running counts of completed and skipped (unchanged) refreshes. False
+  // where the driver does not measure them.
+  bool lastRefreshTimings(uint32_t out[8]) const;
+  // xteink-pokemon: see PanelDriver::pulseScan / pulseFinish / endPulseDrive.
+  // The target is a framebuffer-layout image (1 white), `drive` a same-layout
+  // mask (1 = drive this pixel); the window is in framebuffer rows and bytes.
+  bool pulseScan(const uint8_t* target, const uint8_t* drive, uint16_t row0, uint16_t row1, uint16_t byte0,
+                 uint16_t byte1, uint8_t frames, bool wait);
+  void pulseFinish();
+  void endPulseDrive();
   uint16_t fastRefreshCutoffMs() const;
 
   // Hold the periodic anti-ghost full refresh through a live interaction (slider

@@ -304,7 +304,7 @@ void Uc8179Driver::streamPlane(EpdBus& bus, uint8_t ramCmd, const uint8_t* fb, b
   uint8_t row[128];
   const uint16_t wb = _wb <= sizeof(row) ? _wb : sizeof(row);
   bus.cmd(ramCmd);
-  auto txn = bus.beginTxn();
+  bus.beginTxn();
   for (int y = static_cast<int>(_h) - 1; y >= 0; y--) {
     const uint8_t* src = fb + static_cast<uint32_t>(y) * _wb;
     if (invert) {
@@ -313,31 +313,33 @@ void Uc8179Driver::streamPlane(EpdBus& bus, uint8_t ramCmd, const uint8_t* fb, b
                                ? static_cast<uint16_t>(_wb - offset)
                                : static_cast<uint16_t>(sizeof(row));
         for (uint16_t x = 0; x < n; x++) row[x] = static_cast<uint8_t>(~src[offset + x]);
-        txn.writeBytes(row, n);
+        bus.rawWriteBytes(row, n);
         offset = static_cast<uint16_t>(offset + n);
       }
     } else {
-      txn.writeBytes(src, _wb);
+      bus.rawWriteBytes(src, _wb);
     }
   }
   // Keep padding in the same burst as the visible plane. Opening a separate
   // SPI transaction for each of the 120 padding rows adds avoidable overhead.
   memset(row, 0xFF, wb);
-  for (uint16_t y = _h; y < _tresH; y++) txn.writeBytes(row, wb);
+  for (uint16_t y = _h; y < _tresH; y++) bus.rawWriteBytes(row, wb);
+  bus.endTxn();
 }
 
 void Uc8179Driver::streamPlaneXor(EpdBus& bus, uint8_t ramCmd, const uint8_t* lhs, const uint8_t* rhs) {
   uint8_t row[128];
   const uint16_t wb = _wb <= sizeof(row) ? _wb : sizeof(row);
   bus.cmd(ramCmd);
-  auto txn = bus.beginTxn();
+  bus.beginTxn();
   for (int y = static_cast<int>(_h) - 1; y >= 0; y--) {
     const uint32_t offset = static_cast<uint32_t>(y) * _wb;
     for (uint16_t x = 0; x < wb; x++) row[x] = static_cast<uint8_t>(lhs[offset + x] ^ rhs[offset + x]);
-    txn.writeBytes(row, wb);
+    bus.rawWriteBytes(row, wb);
   }
   memset(row, 0xFF, wb);
-  for (uint16_t y = _h; y < _tresH; y++) txn.writeBytes(row, wb);
+  for (uint16_t y = _h; y < _tresH; y++) bus.rawWriteBytes(row, wb);
+  bus.endTxn();
 }
 
 bool Uc8179Driver::displayStart(EpdBus& bus, const uint8_t* fb, const uint8_t* prev, RefreshMode mode, bool turnOff) {

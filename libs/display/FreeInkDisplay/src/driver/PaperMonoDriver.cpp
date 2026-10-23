@@ -301,13 +301,14 @@ void PaperMonoDriver::writePlane(EpdBus& bus, uint8_t command, const uint8_t* da
   // A 180-degree 1-bpp raster rotation is a byte-order reversal plus a bit
   // reversal inside every byte. Stream it in bounded chunks so no second
   // framebuffer is required and keep CS asserted for the whole RAM write.
-  auto txn = bus.beginTxn();
+  bus.beginTxn();
   for (uint32_t sent = 0; sent < BUFFER_SIZE; sent += ROTATE_CHUNK_BYTES) {
     const uint16_t count =
         static_cast<uint16_t>((BUFFER_SIZE - sent) < ROTATE_CHUNK_BYTES ? (BUFFER_SIZE - sent) : ROTATE_CHUNK_BYTES);
     for (uint16_t i = 0; i < count; ++i) ROTATE_CHUNK[i] = REVERSE_BITS_LUT[data[BUFFER_SIZE - 1 - sent - i]];
-    txn.writeBytes(ROTATE_CHUNK, count);
+    bus.rawWriteBytes(ROTATE_CHUNK, count);
   }
+  bus.endTxn();
 }
 
 void PaperMonoDriver::writePlaneWindow(EpdBus& bus, uint8_t command, const uint8_t* data, uint16_t x, uint16_t y,
@@ -319,7 +320,7 @@ void PaperMonoDriver::writePlaneWindow(EpdBus& bus, uint8_t command, const uint8
   uint16_t staged = 0;
 
   bus.cmd(command);
-  auto txn = bus.beginTxn();
+  bus.beginTxn();
   for (uint16_t rowOffset = 0; rowOffset < h; ++rowOffset) {
     const uint16_t sourceY = static_cast<uint16_t>(y + h - 1 - rowOffset);
     const uint32_t rowBase = static_cast<uint32_t>(sourceY) * WIDTH_BYTES;
@@ -327,12 +328,13 @@ void PaperMonoDriver::writePlaneWindow(EpdBus& bus, uint8_t command, const uint8
       const uint16_t sourceByte = static_cast<uint16_t>(firstByte + widthBytes - 1 - byteOffset);
       ROTATE_CHUNK[staged++] = REVERSE_BITS_LUT[data[rowBase + sourceByte]];
       if (staged == ROTATE_CHUNK_BYTES) {
-        txn.writeBytes(ROTATE_CHUNK, staged);
+        bus.rawWriteBytes(ROTATE_CHUNK, staged);
         staged = 0;
       }
     }
   }
-  if (staged > 0) txn.writeBytes(ROTATE_CHUNK, staged);
+  if (staged > 0) bus.rawWriteBytes(ROTATE_CHUNK, staged);
+  bus.endTxn();
 }
 
 void PaperMonoDriver::activate(EpdBus& bus, uint8_t control) {
